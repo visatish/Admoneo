@@ -96,12 +96,21 @@ public class CustomService extends Service {
             double original_lat = Double.parseDouble(my_location.split(",")[0]);
             double original_long = Double.parseDouble(my_location.split(",")[1]);
 
-            double end_lat = location.getLatitude();
-            double end_long = location.getLongitude();
+//            double end_lat = location.getLatitude();
+//            double end_long = location.getLongitude();
+//
+//            double lat_difference = original_lat - end_lat;
+//            double long_difference = original_long - end_long;
+//
+//            double a = Math.pow(Math.sin(Math.toRadians(lat_difference/2)), 2) +
+//                       Math.cos(Math.toRadians(original_lat)) * Math.cos(Math.toRadians(end_lat)) *
+//                       Math.pow(Math.sin(Math.toRadians(long_difference/2)), 2);
+//            double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+//            double d = 6371009 * c;
 
-            
-
-            location_delta =
+            float [] distance = new float[1];
+            Location.distanceBetween(original_lat, original_long, location.getLatitude(), location.getLongitude(), distance);
+            location_delta = distance[0];
             my_location = "" + location.getLatitude() + "," + location.getLongitude();
 
 
@@ -198,71 +207,72 @@ public class CustomService extends Service {
                 String keyword = "";
                 String url = "";
                 stores = read();
-                for (int i = 0; i <= 1; i++) {
-                    Store store = stores.get(i);
-                    keyword = store.name.replaceAll("\\s+", "");
-                    url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=" + my_location + "&radius=" + radius + "&keyword=" + keyword + "&key=AIzaSyDtVSemZclXeP0ja7-qHArCrczq9rt-TGI&opennow=true";
-                    Log.d("CustomService", "url: " + url);
-                    RequestQueue queue = Volley.newRequestQueue(my_context);
-                    StringRequest sr = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
-                        @Override
-                        public void onResponse(String response) {
-                            Log.d("CustomService", "Response: " + response);
-                            JSONObject parsedResponse = parseString(response);
-                            try {
-                                JSONArray results = parsedResponse.getJSONArray("results");
-                                if (results.length() > 0) {
-                                    JSONObject place = (JSONObject) results.get(0);
-                                    String name = place.getString("name");
+                if (location_delta > 1610) {
+                    for (int i = 0; i <= 1; i++) {
+                        Store store = stores.get(i);
+                        keyword = store.name.replaceAll("\\s+", "");
+                        url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=" + my_location + "&radius=" + radius + "&keyword=" + keyword + "&key=AIzaSyDtVSemZclXeP0ja7-qHArCrczq9rt-TGI&opennow=true";
+                        Log.d("CustomService", "url: " + url);
+                        RequestQueue queue = Volley.newRequestQueue(my_context);
+                        StringRequest sr = new StringRequest(Request.Method.GET, url, new Response.Listener<String>() {
+                            @Override
+                            public void onResponse(String response) {
+                                Log.d("CustomService", "Response: " + response);
+                                JSONObject parsedResponse = parseString(response);
+                                try {
+                                    JSONArray results = parsedResponse.getJSONArray("results");
+                                    if (results.length() > 0) {
+                                        JSONObject place = (JSONObject) results.get(0);
+                                        String name = place.getString("name");
 
-                                    //get String of items
-                                    String items = "";
-                                   for (int i = 0; i < stores.size(); i++) {
-                                       Store s = stores.get(i);
-                                       if (s.name.equals(name)) {
-                                           items = s.items.toString().replaceAll("[\\[\\](){}]",""); // remove brackets
-                                       }
-                                   }
-                                    NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(my_context);
-                                    mBuilder.setContentTitle(name + " is nearby")
-                                            .setContentText("Tasks: " + items)
-                                            .setSmallIcon(R.drawable.ic_launcher)
-                                            .setAutoCancel(true);
+                                        //get String of items
+                                        String items = "";
+                                        for (int i = 0; i < stores.size(); i++) {
+                                            Store s = stores.get(i);
+                                            if (s.name.equals(name)) {
+                                                items = s.items.toString().replaceAll("[\\[\\](){}]", ""); // remove brackets
+                                            }
+                                        }
+                                        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(my_context);
+                                        mBuilder.setContentTitle(name + " is nearby")
+                                                .setContentText("Tasks: " + items)
+                                                .setSmallIcon(R.drawable.ic_launcher)
+                                                .setAutoCancel(true);
 
-                                    // Creates an explicit intent for an Activity in your app
-                                    Intent resultIntent = new Intent(my_context, Pass_Go.class);
-                                    resultIntent.putExtra("Name", name);
-                                    resultIntent.putExtra("Stores", stores);
+                                        // Creates an explicit intent for an Activity in your app
+                                        Intent resultIntent = new Intent(my_context, Pass_Go.class);
+                                        resultIntent.putExtra("Name", name);
+                                        resultIntent.putExtra("Stores", stores);
 
-                                    // The stack builder object will contain an artificial back stack for the
-                                    // started Activity.
-                                    // This ensures that navigating backward from the Activity leads out of
-                                    // your application to the Home screen.
-                                    TaskStackBuilder stackBuilder = TaskStackBuilder.create(my_context);
-                                    // Adds the back stack for the Intent (but not the Intent itself)
-                                    stackBuilder.addParentStack(Pass_Go.class);
-                                    // Adds the Intent that starts the Activity to the top of the stack
-                                    stackBuilder.addNextIntent(resultIntent);
-                                    PendingIntent resultPendingIntent =
-                                            stackBuilder.getPendingIntent(
-                                                    0,
-                                                    PendingIntent.FLAG_UPDATE_CURRENT
-                                            );
-                                    mBuilder.setContentIntent(resultPendingIntent);
+                                        // The stack builder object will contain an artificial back stack for the
+                                        // started Activity.
+                                        // This ensures that navigating backward from the Activity leads out of
+                                        // your application to the Home screen.
+                                        TaskStackBuilder stackBuilder = TaskStackBuilder.create(my_context);
+                                        // Adds the back stack for the Intent (but not the Intent itself)
+                                        stackBuilder.addParentStack(Pass_Go.class);
+                                        // Adds the Intent that starts the Activity to the top of the stack
+                                        stackBuilder.addNextIntent(resultIntent);
+                                        PendingIntent resultPendingIntent =
+                                                stackBuilder.getPendingIntent(
+                                                        0,
+                                                        PendingIntent.FLAG_UPDATE_CURRENT
+                                                );
+                                        mBuilder.setContentIntent(resultPendingIntent);
 
-                                    Random random = new Random();
-                                    int m = random.nextInt(9999 - 1000) + 1000;
+                                        Random random = new Random();
+                                        int m = random.nextInt(9999 - 1000) + 1000;
 
-                                    mNotificationManager.notify(m, mBuilder.build());
-                                    Log.d("Custom Service", "Name of Place: " + name);
+                                        mNotificationManager.notify(m, mBuilder.build());
+                                        Log.d("Custom Service", "Name of Place: " + name);
+                                    }
+                                } catch (JSONException e) {
+                                    Log.d("ClothingSelector", "JSON Exception: " + e.getMessage());
                                 }
-                            } catch (JSONException e) {
-                                Log.d("ClothingSelector", "JSON Exception: " + e.getMessage());
                             }
-                        }
-                    }, new Response.ErrorListener() {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
+                        }, new Response.ErrorListener() {
+                            @Override
+                            public void onErrorResponse(VolleyError error) {
 //                mPostCommentResponse.requestEndedWithError(error);
 //                String body = "Empty";
 //                //get status code here
@@ -275,55 +285,56 @@ public class CustomService extends Service {
 //                        e.printStackTrace();
 //                    }
 //                }
-                            Log.d("ClothingSelector", "Error!");
-                            Log.d("ClothingSelector", "Error: " + error);
+                                Log.d("ClothingSelector", "Error!");
+                                Log.d("ClothingSelector", "Error: " + error);
 
-                            //return control to main activity
+                                //return control to main activity
 //                switchBack();
-                        }
-                    }) {
-                        @Override
-                        protected Map<String, String> getParams() {
-                            Map<String, String> params = new HashMap<String, String>();
+                            }
+                        }) {
+                            @Override
+                            protected Map<String, String> getParams() {
+                                Map<String, String> params = new HashMap<String, String>();
 //                                        params.put("location","37.8710434,-122.2507729");
 //                                        params.put("radius","8000");
 //                                        params.put("type","bakery");
 //                                        params.put("keyword","cream berkeley");
 //                                        params.put("key","AIzaSyDtVSemZclXeP0ja7-qHArCrczq9rt-TGI");
 //                                        params.put("opennow", "true");
-                            return params;
-                        }
+                                return params;
+                            }
 
-                        //                                    @Override
-                        public Map<String, String> getHeaders() throws AuthFailureError {
-                            Map<String, String> params = new HashMap<String, String>();
+                            //                                    @Override
+                            public Map<String, String> getHeaders() throws AuthFailureError {
+                                Map<String, String> params = new HashMap<String, String>();
 //                                        params.put("location","37.8710434,-122.2507729");
 //                                        params.put("radius","8000");
 //                                        params.put("type","bakery");
 //                                        params.put("keyword","cream berkeley");
 //                                        params.put("key","AIzaSyDtVSemZclXeP0ja7-qHArCrczq9rt-TGI");
 //                                        params.put("opennow", "true");
-                            return params;
-                        }
-                    };
-                    sr.setRetryPolicy(new RetryPolicy() {
-                        @Override
-                        public int getCurrentTimeout() {
-                            return 50000;
-                        }
+                                return params;
+                            }
+                        };
+                        sr.setRetryPolicy(new RetryPolicy() {
+                            @Override
+                            public int getCurrentTimeout() {
+                                return 50000;
+                            }
 
-                        @Override
-                        public int getCurrentRetryCount() {
-                            return 50000;
-                        }
+                            @Override
+                            public int getCurrentRetryCount() {
+                                return 50000;
+                            }
 
-                        @Override
-                        public void retry(VolleyError error) throws VolleyError {
-                            Log.d("ClothingSelector", "Retry Error: " + error);
-                        }
-                    });
+                            @Override
+                            public void retry(VolleyError error) throws VolleyError {
+                                Log.d("ClothingSelector", "Retry Error: " + error);
+                            }
+                        });
 
-                    queue.add(sr);
+                        queue.add(sr);
+                    }
                 }
             }
         };
